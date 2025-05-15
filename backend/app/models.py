@@ -8,3 +8,11 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
+
+class StationStatus(BaseModel):
+    station_id: str
+    occupied: bool
+    battery_voltage: float
+    charge_voltage: float
+    charge_current: float
+

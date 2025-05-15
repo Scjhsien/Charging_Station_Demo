@@ -15,11 +15,11 @@
       </div>
 
       <div class="voltage">
-        充電電壓：{{ station.occupied ? '58 V' : '--' }}
+        充電電壓：{{ station.occupied ? CHARGE_VOLTAGE + ' V' : '--' }}
       </div>
 
       <div class="current">
-        充電電流：{{ station.occupied ? '10 A' : '--' }}
+        充電電流：{{ station.occupied ? CHARGE_CURRENT + ' A' : '--' }}
       </div>
     </div>
   </div>
@@ -29,29 +29,36 @@
 import { reactive, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 
+// === 常數設定 ===
+const CHARGE_VOLTAGE = 58.0
+const CHARGE_CURRENT = 10.0
+
+// === 充電站模擬資料 ===
 const stations = reactive([
   { id: 'A', name: '充電站 A', occupied: false, batteryVoltage: 54.0 },
   { id: 'B', name: '充電站 B', occupied: false, batteryVoltage: 54.0 },
   { id: 'C', name: '充電站 C', occupied: false, batteryVoltage: 54.0 }
 ])
 
+// === 傳送資料到後端 ===
 const sendToBackend = async (station: any) => {
   const payload = {
     station_id: station.id,
     occupied: station.occupied,
     battery_voltage: station.batteryVoltage,
-    charge_voltage: 58.0,
-    charge_current: 10.0
+    charge_voltage: CHARGE_VOLTAGE,
+    charge_current: CHARGE_CURRENT
   }
 
   try {
     await axios.post('http://127.0.0.1:8000/update_station', payload)
-    console.log(`✅ ${station.id} 已送出`, payload)
+    console.log(`[✅] 已送出 ${station.id}：`, payload)
   } catch (error) {
-    console.error(`❌ ${station.id} 傳送失敗`, error)
+    console.error(`[❌] 傳送失敗 ${station.id}`, error)
   }
 }
 
+// === 啟動定時器，每秒更新電壓並送出資料 ===
 let intervalId: number
 
 onMounted(() => {
