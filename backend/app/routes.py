@@ -47,3 +47,29 @@ async def update_station(status: StationStatus):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"寫入失敗：{str(e)}")
 
+
+
+@router.get("/api/stations")
+async def get_all_stations():
+    cursor = db["stations"].find({}, {"_id": 0})
+    stations = await cursor.to_list(length=100)
+    return stations
+
+@router.post("/api/reset_stations")
+async def reset_stations():
+    default_state = {
+        "occupied": False,
+        "battery_voltage": 54.0,
+        "charge_voltage": 58.0,
+        "charge_current": 0.0
+    }
+    station_ids = ['A', 'B', 'C']
+    for sid in station_ids:
+        await db["stations"].update_one(
+            {"station_id": sid},
+            {"$set": {"station_id": sid, **default_state}},
+            upsert=True
+        )
+    return {"message": "站點狀態已重設"}
+
+

@@ -35,9 +35,9 @@ const CHARGE_CURRENT = 10.0
 
 // === 充電站模擬資料 ===
 const stations = reactive([
-  { id: 'A', name: '充電站 A', occupied: false, batteryVoltage: 54.0 },
-  { id: 'B', name: '充電站 B', occupied: false, batteryVoltage: 54.0 },
-  { id: 'C', name: '充電站 C', occupied: false, batteryVoltage: 54.0 }
+  { id: 'A', name: '充電站 A', occupied: false, batteryVoltage: 0.0 },
+  { id: 'B', name: '充電站 B', occupied: false, batteryVoltage: 0.0 },
+  { id: 'C', name: '充電站 C', occupied: false, batteryVoltage: 0.0 }
 ])
 
 // === 傳送資料到後端 ===
@@ -62,13 +62,18 @@ const sendToBackend = async (station: any) => {
 let intervalId: number
 
 onMounted(() => {
+
+    axios.post('http://localhost:8000/api/reset_stations') 
+    .then(() => console.log('充電站狀態已重置'))
+    .catch((err) => console.error('初始化失敗', err))
+
   intervalId = setInterval(() => {
     stations.forEach(station => {
       if (station.occupied) {
         const fluctuation = (Math.random() - 0.5) * 0.5
         station.batteryVoltage = Math.min(58, Math.max(50, station.batteryVoltage + fluctuation))
       } else {
-        station.batteryVoltage = 54.0
+        station.batteryVoltage = 0.0
       }
 
       sendToBackend(station)

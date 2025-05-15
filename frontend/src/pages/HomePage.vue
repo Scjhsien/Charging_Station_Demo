@@ -1,5 +1,6 @@
 <template>
   <div class="home-page">
+    <!-- 使用者資訊 -->
     <div class="info-bar">
       <div>
         <strong>登入帳號：</strong>{{ username }}
@@ -8,33 +9,101 @@
       <button class="logout-btn" @click="logout">登出</button>
     </div>
 
+    <!-- 主內容 -->
     <div class="main-content">
-      <div v-if="loading" class="status-text">讀取使用者資料中...</div>
-      <div v-else-if="error" class="status-text error-text">{{ error }}</div>
-      <div v-else class="welcome-card">
-        <h2 class="welcome-message">Welcome，{{ username }}！</h2>
+      <div v-if="loading" class="status-text">讀取資料中...</div>
+      <div v-else>
+        <div v-if="error" class="status-text error-text">{{ error }}</div>
+
+        <!-- 卡片顯示 -->
+        <div class="stations-wrapper">
+          <div v-for="station in stations" :key="station.id" class="station-info-card">
+            <img :src="station.image" alt="station" class="station-img" />
+            <div class="station-details">
+              <h2>{{ station.name }} 狀態</h2>
+              <p><strong>是否有車：</strong>{{ station.hasCar ? '有車' : '無車' }}</p>
+              <p><strong>電池電壓：</strong>{{ station.batteryVoltage.toFixed(1) }} V</p>
+              <p><strong>充電電壓：</strong>{{ station.chargeVoltage.toFixed(1) }} V</p>
+              <p><strong>充電電流：</strong>{{ station.current.toFixed(1) }} A</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '@/store/user'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
-const userStore = useUserStore()
 const router = useRouter()
+const userStore = useUserStore()
 
 const username = ref('')
 const error = ref('')
 const loading = ref(true)
 
+const stations = ref([
+  {
+    id: 'A',
+    name: '充電站 A',
+    hasCar: false,
+    batteryVoltage: 0,
+    chargeVoltage: 0,
+    current: 0,
+    image: '/station_a.png',
+  },
+  {
+    id: 'B',
+    name: '充電站 B',
+    hasCar: false,
+    batteryVoltage: 0,
+    chargeVoltage: 0,
+    current: 0,
+    image: '/station_b.png',
+  },
+  {
+    id: 'C',
+    name: '充電站 C',
+    hasCar: false,
+    batteryVoltage: 0,
+    chargeVoltage: 0,
+    current: 0,
+    image: '/station_c.png',
+  },
+])
+
+// 取得充電站資料
+const fetchStations = async () => {
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/stations`)
+    const data = response.data
+
+    for (const station of stations.value) {
+      const found = data.find((s: any) => s.station_id === station.id)
+      if (found) {
+        station.hasCar = found.occupied
+        station.batteryVoltage = found.battery_voltage
+        station.chargeVoltage = found.charge_voltage
+        station.current = found.charge_current
+      }
+    }
+  } catch (err) {
+    console.error('❌ 取得資料失敗:', err)
+    error.value = '⚠️ 取得充電站資訊失敗，顯示初始資料'
+  }
+}
+
+// 登出
 const logout = () => {
   userStore.logout()
   router.push('/login')
 }
+
+let intervalId: number
 
 onMounted(async () => {
   userStore.init()
@@ -45,11 +114,22 @@ onMounted(async () => {
       }
     })
     username.value = res.data.username
+    await fetchStations()
+
+    // ✅ 每秒更新一次資料
+    intervalId = setInterval(() => {
+      fetchStations()
+    }, 1000)
+
   } catch (err: any) {
     error.value = err.response?.data?.detail || '驗證失敗'
   } finally {
     loading.value = false
   }
+})
+
+onUnmounted(() => {
+  clearInterval(intervalId)
 })
 </script>
 
@@ -89,15 +169,14 @@ onMounted(async () => {
 
 .main-content {
   display: flex;
-  justify-content: center;
-  align-items: center;
   flex-direction: column;
+  align-items: center;
 }
 
 .status-text {
   font-size: 1.1rem;
   color: #606266;
-  margin-top: 2rem;
+  margin-top: 1rem;
 }
 
 .error-text {
@@ -105,20 +184,37 @@ onMounted(async () => {
   font-weight: bold;
 }
 
-.welcome-card {
-  background-color: #fff;
-  padding: 2rem 3rem;
+.stations-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+  width: 100%;
+  max-width: 1000px;
+}
+
+.station-info-card {
+  width: 300px;
+  background: #fff;
   border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-  text-align: center;
-  max-width: 500px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.welcome-message {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #303133;
-  margin-bottom: 1rem;
+.station-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
 }
 
+.station-details {
+  width: 100%;
+  padding: 1rem 1.2rem;
+  font-size: 1rem;
+  line-height: 1.6rem;
+  text-align: left;
+}
 </style>
